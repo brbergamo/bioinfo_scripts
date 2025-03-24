@@ -1,7 +1,6 @@
 #!/bin/bash -l
 
-#$ -t 1-103
-#$ -N featurecounts_job
+#$ -N featurecounts_all
 #$ -o featurecounts_output.log
 #$ -e featurecounts_error.log
 #$ -pe omp 8
@@ -15,24 +14,21 @@ STAR_OUTPUT_DIR="/projectnb/evolution/bergamo/STAR"
 # GTF annotation file
 GTF_FILE="/projectnb/evolution/bergamo/annotations/genes.gtf"
 
-# Sorted BAM files from STAR
-bam_files=($(find $STAR_OUTPUT_DIR -name "*Aligned.sortedByCoord.out.bam" | sort))
+# Output directory
+OUTPUT_DIR="/projectnb/evolution/bergamo/featureCounts"
+mkdir -p "$OUTPUT_DIR"
 
-# Selecting the BAM file corresponding to the current job ID
-bam_file=${bam_files[$((SGE_TASK_ID-1))]}
+# Find all BAM files sorted by coordinate
+bam_files=$(find "$STAR_OUTPUT_DIR" -name "*Aligned.sortedByCoord.out.bam" | sort)
 
-# Extracting sample name prefix
-prefix=$(basename "$bam_file" | sed 's/_Aligned\.sortedByCoord\.out\.bam//')
+# Output file
+OUTPUT_FILE="${OUTPUT_DIR}/all_samples_counts.txt"
 
-# Defining output directory
-output_dir="/projectnb/evolution/bergamo/featureCounts"
-mkdir -p "$output_dir"
-
-# Running featureCounts
+# Run featureCounts on all BAM files at once
 featureCounts -T 8 \
   -a "$GTF_FILE" \
-  -o "${output_dir}/${prefix}_counts.txt" \
+  -o "$OUTPUT_FILE" \
   -p -B -C \
-  "$bam_file"
+  $bam_files
 
-echo "Quantification completed for $prefix"
+echo "Quantification completed for all samples. Output saved to $OUTPUT_FILE"
